@@ -2,12 +2,7 @@ use crate::{
     mem::format,
     storage::Storage,
     utils::{forward_bin_mut_impl, try_forward_bin_mut_impl},
-    ApInt,
-    BitWidth,
-    Digit,
-    Error,
-    Result,
-    Width,
+    ApInt, BitWidth, Digit, Error, Result, Width,
 };
 
 impl Clone for ApInt {
@@ -76,6 +71,17 @@ impl ApInt {
         self.len = rhs.len;
     }
 
+    pub fn truncate_assign(&mut self, rhs: &ApInt) -> Result<()> {
+        if self.width() == rhs.width() {
+            self.assign(&rhs)
+        } else if self.width() > rhs.width() {
+            self.assign(&(rhs.clone().into_zero_extend(self.width())?))
+        } else {
+            self.assign(&(rhs.clone().into_truncate(self.width())?))
+        }
+        Ok(())
+    }
+
     /// Strictly assigns `rhs` to this `ApInt`.
     ///
     /// After this operation `rhs` and `self` are equal to each other.
@@ -94,7 +100,7 @@ impl ApInt {
                     "Occured while trying to `strict_assign` {:?} to {:?}.",
                     self, rhs
                 ))
-                .into()
+                .into();
         }
         self.as_digit_slice_mut()
             .copy_from_slice(rhs.as_digit_slice());
@@ -123,6 +129,24 @@ impl ApInt {
         try_forward_bin_mut_impl(self, target_width, ApInt::truncate)
     }
 
+    /// Tries to get the range in [up, down] of this `ApInt` and returns the result.
+    pub fn range(&self, up: usize, down: usize) -> Result<ApInt> {
+        let shiftted = self.to_owned().into_wrapping_lshr(down)?;
+        let len = up - down + 1;
+
+        shiftted.into_truncate(len)
+    }
+
+    pub fn word(&self, i: usize) -> Result<ApInt> {
+        self.range((i + 1) * Digit::BITS - 1, i * Digit::BITS)
+    }
+
+    pub fn set_word(&mut self, i: usize, word: &ApInt) -> Result<()> {
+        // let word = word.range(self.width().to_usize() - 1, 0)?;
+        self.as_digit_slice_mut()[i] = word.access_data().inl();
+        Ok(())
+    }
+
     /// Tries to truncate this `ApInt` inplace to the given `target_width`.
     ///
     /// # Note
@@ -142,7 +166,7 @@ impl ApInt {
         let target_width = target_width.into();
 
         if target_width == actual_width {
-            return Ok(())
+            return Ok(());
         }
 
         if target_width > self.width() {
@@ -154,7 +178,7 @@ impl ApInt {
                     actual_width.to_usize(),
                     target_width.to_usize()
                 ))
-                .into()
+                .into();
         }
 
         let actual_req_digits = actual_width.required_digits();
@@ -245,7 +269,7 @@ impl ApInt {
         let target_width = target_width.into();
 
         if target_width == actual_width {
-            return Ok(())
+            return Ok(());
         }
 
         if target_width < actual_width {
@@ -255,7 +279,7 @@ impl ApInt {
                      truncate the instance instead?",
                     actual_width, target_width
                 ))
-                .into()
+                .into();
         }
 
         let actual_req_digits = actual_width.required_digits();
@@ -330,7 +354,7 @@ impl ApInt {
         let target_width = target_width.into();
 
         if target_width == actual_width {
-            return Ok(())
+            return Ok(());
         }
 
         if target_width < actual_width {
@@ -340,11 +364,11 @@ impl ApInt {
                      truncate the instance instead?",
                     actual_width, target_width
                 ))
-                .into()
+                .into();
         }
 
         if !self.msb() {
-            return self.zero_extend(target_width)
+            return self.zero_extend(target_width);
         }
 
         let actual_req_digits = actual_width.required_digits();

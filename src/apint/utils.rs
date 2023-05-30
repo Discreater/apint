@@ -1,12 +1,6 @@
 use crate::{
-    digit_seq::ContiguousDigitSeq,
-    storage::Storage,
-    ApInt,
-    BitWidth,
-    Digit,
-    Error,
-    Result,
-    Width,
+    digit_seq::ContiguousDigitSeq, storage::Storage, ApInt, BitWidth, Digit,
+    Error, Result, Width,
 };
 
 #[cfg(feature = "rand_support")]
@@ -52,6 +46,15 @@ impl ApInt {
 pub(crate) enum DataAccess<'a> {
     Inl(Digit),
     Ext(&'a [Digit]),
+}
+
+impl DataAccess<'_> {
+    pub(crate) fn inl(&self) -> Digit {
+        match self {
+            DataAccess::Inl(digit) => digit.to_owned(),
+            DataAccess::Ext(slice) => slice[0].to_owned(),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -144,7 +147,7 @@ impl ApInt {
     ) -> Result<ZipDataAccess<'a, 'b>> {
         if self.width() != other.width() {
             return Error::unmatching_bitwidths(self.width(), other.width())
-                .into()
+                .into();
         }
         Ok(match self.storage() {
             Storage::Inl => {
@@ -152,12 +155,10 @@ impl ApInt {
                     other.data.inl
                 })
             }
-            Storage::Ext => {
-                ZipDataAccess::Ext(
-                    self.as_digit_slice(),
-                    other.as_digit_slice(),
-                )
-            }
+            Storage::Ext => ZipDataAccess::Ext(
+                self.as_digit_slice(),
+                other.as_digit_slice(),
+            ),
         })
     }
 
@@ -174,21 +175,17 @@ impl ApInt {
     ) -> Result<ZipDataAccessMutSelf<'a, 'b>> {
         if self.width() != other.width() {
             return Error::unmatching_bitwidths(self.width(), other.width())
-                .into()
+                .into();
         }
         Ok(match self.storage() {
-            Storage::Inl => {
-                ZipDataAccessMutSelf::Inl(
-                    unsafe { &mut self.data.inl },
-                    unsafe { other.data.inl },
-                )
-            }
-            Storage::Ext => {
-                ZipDataAccessMutSelf::Ext(
-                    self.as_digit_slice_mut(),
-                    other.as_digit_slice(),
-                )
-            }
+            Storage::Inl => ZipDataAccessMutSelf::Inl(
+                unsafe { &mut self.data.inl },
+                unsafe { other.data.inl },
+            ),
+            Storage::Ext => ZipDataAccessMutSelf::Ext(
+                self.as_digit_slice_mut(),
+                other.as_digit_slice(),
+            ),
         })
     }
 
@@ -204,21 +201,18 @@ impl ApInt {
         rhs: &'b mut ApInt,
     ) -> Result<ZipDataAccessMutBoth<'a, 'b>> {
         if lhs.width() != rhs.width() {
-            return Error::unmatching_bitwidths(lhs.width(), rhs.width()).into()
+            return Error::unmatching_bitwidths(lhs.width(), rhs.width())
+                .into();
         }
         Ok(match lhs.storage() {
-            Storage::Inl => {
-                ZipDataAccessMutBoth::Inl(
-                    unsafe { &mut lhs.data.inl },
-                    unsafe { &mut rhs.data.inl },
-                )
-            }
-            Storage::Ext => {
-                ZipDataAccessMutBoth::Ext(
-                    lhs.as_digit_slice_mut(),
-                    rhs.as_digit_slice_mut(),
-                )
-            }
+            Storage::Inl => ZipDataAccessMutBoth::Inl(
+                unsafe { &mut lhs.data.inl },
+                unsafe { &mut rhs.data.inl },
+            ),
+            Storage::Ext => ZipDataAccessMutBoth::Ext(
+                lhs.as_digit_slice_mut(),
+                rhs.as_digit_slice_mut(),
+            ),
         })
     }
 

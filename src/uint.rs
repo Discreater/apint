@@ -1,15 +1,11 @@
 //! All UInt methods are defined here, except for `std::ops` traits in
 //! `std_ops.rs`
 
+use std::borrow::Cow;
+
 use crate::{
     utils::{forward_bin_mut_impl, forward_mut_impl, try_forward_bin_mut_impl},
-    ApInt,
-    BitPos,
-    BitWidth,
-    Int,
-    Result,
-    ShiftAmount,
-    Width,
+    ApInt, BitPos, BitWidth, Int, Result, ShiftAmount, Width, Radix,
 };
 
 use core::cmp::Ordering;
@@ -91,7 +87,7 @@ impl UInt {
     }
 
     /// Creates a new `UInt` with the given bit width that represents zero.
-    pub fn zero(width: BitWidth) -> UInt {
+    pub fn zero<W: Into<BitWidth>>(width: W) -> UInt {
         UInt::from(ApInt::zero(width))
     }
 
@@ -291,13 +287,13 @@ impl UInt {
 impl PartialOrd for UInt {
     fn partial_cmp(&self, rhs: &UInt) -> Option<Ordering> {
         if self.width() != rhs.width() {
-            return None
+            return None;
         }
         if self.checked_lt(rhs).unwrap() {
-            return Some(Ordering::Less)
+            return Some(Ordering::Less);
         }
         if self.value == rhs.value {
-            return Some(Ordering::Equal)
+            return Some(Ordering::Equal);
         }
         Some(Ordering::Greater)
     }
@@ -597,6 +593,10 @@ impl UInt {
         self.value.assign(&rhs.value)
     }
 
+    pub fn truncate_assign(&mut self, rhs: UInt) -> Result<()> {
+        self.value.truncate_assign(&rhs.value)
+    }
+
     /// Strictly assigns `rhs` to this `UInt`.
     ///
     /// After this operation `rhs` and `self` are equal to each other.
@@ -632,6 +632,18 @@ impl UInt {
         W: Into<BitWidth>,
     {
         try_forward_bin_mut_impl(self, target_width, UInt::truncate)
+    }
+
+    pub fn range(&self, up: usize, down: usize) -> Result<UInt> {
+        self.value.range(up, down).map(UInt::from)
+    }
+
+    pub fn word(&self, i: usize) -> Result<UInt> {
+        self.value.word(i).map(UInt::from)
+    }
+
+    pub fn set_word(&mut self, i: usize, word: &UInt) -> Result<()> {
+        self.value.set_word(i, &word.value)
     }
 
     /// Tries to truncate this `UInt` inplace to the given `target_width`.
@@ -905,6 +917,19 @@ impl UInt {
     }
 }
 
+pub(crate) fn width_cast<'b>(a: &mut UInt, b: &'b UInt) -> Result<Cow<'b, UInt>> {
+    let max_width = a.width().max(b.width());
+    a.extend(max_width)?;
+    if max_width > b.width() {
+        let mut b = b.to_owned();
+        
+        b.extend(max_width)?;
+        Ok(Cow::Owned(b))
+    } else {
+        Ok(Cow::Borrowed(b))
+    }
+}
+
 /// # Arithmetic Operations
 impl UInt {
     /// Negates this `Int` inplace. Note that this will overflow for all values
@@ -942,6 +967,7 @@ impl UInt {
     ///
     /// - If `self` and `rhs` have unmatching bit widths.
     pub fn wrapping_add_assign(&mut self, rhs: &UInt) -> Result<()> {
+        let rhs = width_cast(self, &rhs)?;
         self.value.wrapping_add_assign(&rhs.value)
     }
 
@@ -972,6 +998,7 @@ impl UInt {
     ///
     /// - If `self` and `rhs` have unmatching bit widths.
     pub fn wrapping_sub_assign(&mut self, rhs: &UInt) -> Result<()> {
+        let rhs = width_cast(self, &rhs)?;
         self.value.wrapping_sub_assign(&rhs.value)
     }
 
@@ -1002,6 +1029,7 @@ impl UInt {
     ///
     /// - If `self` and `rhs` have unmatching bit widths.
     pub fn wrapping_mul_assign(&mut self, rhs: &UInt) -> Result<()> {
+        let rhs = width_cast(self, &rhs)?;
         self.value.wrapping_mul_assign(&rhs.value)
     }
 
@@ -1034,6 +1062,7 @@ impl UInt {
     ///
     /// - If `self` and `rhs` have unmatching bit widths.
     pub fn wrapping_div_assign(&mut self, rhs: &UInt) -> Result<()> {
+        let rhs = width_cast(self, &rhs)?;
         self.value.wrapping_udiv_assign(&rhs.value)
     }
 
@@ -1067,7 +1096,19 @@ impl UInt {
     ///
     /// - If `self` and `rhs` have unmatching bit widths.
     pub fn wrapping_rem_assign(&mut self, rhs: &UInt) -> Result<()> {
+        let rhs = width_cast(self, &rhs)?;
         self.value.wrapping_urem_assign(&rhs.value)
+    }
+}
+
+impl UInt {
+    /// Returns a `String` representation of the binary encoded `ApInt` for the
+    /// given `Radix`.
+    pub fn to_string_radix<R>(&self, radix: R) -> String
+    where
+        R: Into<Radix>,
+    {
+        self.value.to_string_radix(radix)
     }
 }
 

@@ -343,9 +343,17 @@ impl ApInt {
     where
         R: Into<Radix>,
     {
-        let _radix = radix.into();
+        let radix = radix.into();
 
-        unimplemented!();
+        if radix != Radix::from(16) {
+            unimplemented!();
+        } else  {
+            let mut s = String::new();
+            for digit in self.as_digit_slice().to_owned().into_iter().rev() {
+                s.push_str(&format!("{:016x}", digit));
+            }
+            s
+        }
     }
 }
 

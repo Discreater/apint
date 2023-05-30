@@ -3,28 +3,9 @@
 use crate::{ApInt, Int, ShiftAmount, UInt};
 
 use core::ops::{
-    Add,
-    AddAssign,
-    BitAnd,
-    BitAndAssign,
-    BitOr,
-    BitOrAssign,
-    BitXor,
-    BitXorAssign,
-    Div,
-    DivAssign,
-    Mul,
-    MulAssign,
-    Neg,
-    Not,
-    Rem,
-    RemAssign,
-    Shl,
-    ShlAssign,
-    Shr,
-    ShrAssign,
-    Sub,
-    SubAssign,
+    Add, AddAssign, BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor,
+    BitXorAssign, Div, DivAssign, Mul, MulAssign, Neg, Not, Rem, RemAssign,
+    Shl, ShlAssign, Shr, ShrAssign, Sub, SubAssign,
 };
 
 // This is done through a macro to decrease the amount of testing needed, since
@@ -97,6 +78,22 @@ macro_rules! common_std_ops {
             }
         }
 
+        impl Add<$ty> for $ty {
+            type Output = Self;
+
+            fn add(self, rhs: Self) -> Self::Output {
+                self.into_wrapping_add(&rhs).unwrap()
+            }
+        }
+
+        impl<'a> Add<$ty> for &'a $ty {
+            type Output = $ty;
+
+            fn add(self, rhs: $ty) -> Self::Output {
+                rhs.into_wrapping_add(self).unwrap()
+            }
+        }
+
         impl<'a> Sub<&'a $ty> for $ty {
             type Output = Self;
 
@@ -110,6 +107,22 @@ macro_rules! common_std_ops {
 
             fn mul(self, rhs: &'a Self) -> Self::Output {
                 self.into_wrapping_mul(rhs).unwrap()
+            }
+        }
+
+        impl<'a, 'b> Mul<&'a $ty> for &'b $ty {
+            type Output = $ty;
+
+            fn mul(self, rhs: &'a $ty) -> Self::Output {
+                self.clone().into_wrapping_mul(rhs).unwrap()
+            }
+        }
+
+        impl Mul<$ty> for $ty {
+            type Output = Self;
+
+            fn mul(self, rhs: Self) -> Self::Output {
+                self.into_wrapping_mul(&rhs).unwrap()
             }
         }
 

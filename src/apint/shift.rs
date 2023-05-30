@@ -78,6 +78,10 @@ impl ApInt {
         S: Into<ShiftAmount>,
     {
         let shift_amount = shift_amount.into();
+        if shift_amount.to_usize() == self.width().to_usize() {
+            *self = ApInt::zero(self.width());
+            return Ok(())
+        }
         checks::verify_shift_amount(self, shift_amount)?;
         match self.access_data_mut() {
             DataAccessMut::Inl(digit) => {
@@ -149,6 +153,10 @@ impl ApInt {
         S: Into<ShiftAmount>,
     {
         let shift_amount = shift_amount.into();
+        if shift_amount.to_usize() == self.width().to_usize() {
+            *self = ApInt::zero(self.width());
+            return Ok(())
+        }
         checks::verify_shift_amount(self, shift_amount)?;
         match self.access_data_mut() {
             DataAccessMut::Inl(digit) => {

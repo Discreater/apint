@@ -1,12 +1,6 @@
 use crate::{
-    apint::ApIntData,
-    mem::vec::Vec,
-    storage::Storage,
-    ApInt,
-    BitWidth,
-    Digit,
-    Error,
-    Result,
+    apint::ApIntData, mem::vec::Vec, storage::Storage, ApInt, BitWidth, Digit,
+    Error, Result,
 };
 
 use smallvec::SmallVec;
@@ -217,14 +211,16 @@ impl ApInt {
     ///
     /// Note: The last digit in the generated sequence is truncated to make the
     /// `ApInt`'s       value representation fit the given bit-width.
-    pub(in crate::apint) fn repeat_digit<D>(
-        target_width: BitWidth,
+    pub(in crate::apint) fn repeat_digit<D, W>(
+        target_width: W,
         digit: D,
     ) -> ApInt
     where
         D: Into<Digit>,
+        W: Into<BitWidth>,
     {
         use core::iter;
+        let target_width = target_width.into();
         let digit = digit.into();
         let req_digits = target_width.required_digits();
         ApInt::from_iter(iter::repeat(digit).take(req_digits))
@@ -243,7 +239,10 @@ impl ApInt {
     }
 
     /// Creates a new `ApInt` with the given bit width that represents zero.
-    pub fn zero(width: BitWidth) -> ApInt {
+    pub fn zero<W>(width: W) -> ApInt
+    where
+        W: Into<BitWidth>,
+    {
         ApInt::repeat_digit(width, Digit::ZERO)
     }
 
